@@ -1,5 +1,6 @@
 package ILS;
 
+import CSVUtils.CsvWriter;
 import Function.Function;
 import Function.Quadratica;
 import Function.Rastrigin;
@@ -12,8 +13,13 @@ public class IteratedLocalSearch {
     private Function funcaoObjetivo;
     private ArrayList<Double> S;
     private double MAX, MIN;//Intervalo da função
-    private final int MAX_ITERACOES = 500;
+    private final int MAX_ITERACOES = 10000;
     private final int MAX_AMOSTRAS = 10;
+    private static CsvWriter arquivo;
+
+    static {
+        arquivo = new CsvWriter("ILS");
+    }
 
     public IteratedLocalSearch(int n) {
         if (n < 0) {
@@ -35,6 +41,7 @@ public class IteratedLocalSearch {
         }
 
         this.S = new ArrayList();
+
     }
 
     private double geraSolucaoAleatoria() {//gera uma solução aleatória com base na quantidade de variáveis
@@ -49,7 +56,7 @@ public class IteratedLocalSearch {
         r = Math.random();
         percentage = 0.36;
 //        pertubation = ((x * percentage) - (x * (-percentage))) * r + (x * (-percentage) / r);
-        pertubation = ((x * percentage) - (x * (-percentage))) * r + (x * (-percentage));
+        pertubation = ((x * percentage) - (x * (-percentage))) * r + (x * (-percentage)) / r;
 
 //        double sigmoid = 1 / (1 + Math.pow(Math.E, -pertubation));
 //        double rm = 2 * sigmoid - 0.5;
@@ -72,11 +79,19 @@ public class IteratedLocalSearch {
         ArrayList<Double> R = new ArrayList<>();
         ArrayList<Double> W = new ArrayList<>();
         HillClimbingSteepestAscent hc = new HillClimbingSteepestAscent(this.n);
+        double epsilon = Math.pow(10, -15);
+        int i;
 
         this.S = solucaoLocal;
 
-        for (int i = 0; (i < this.MAX_ITERACOES) && limitCheking(); i++) {
+        System.out.println("----------------------------------------\n");
 
+        System.out.println("INÍCIO\n");
+        System.out.println("Ponto inicial : (" + S.get(0) + ", " + S.get(1) + ")");
+        System.out.println("Função objetivo: " + funcaoObjetivo.calculate(S));
+        System.out.print("\n");
+
+        for (i = 0; (i < this.MAX_ITERACOES) && limitCheking(); i++) {
             //pertuba a solução a partir do resultado da busca local
             R = new ArrayList<Double>();
             R.addAll(0, this.S); // copia S para R
@@ -84,16 +99,35 @@ public class IteratedLocalSearch {
 
             //Começa uma nova busca local a partir da solução pertubada
             W = hc.hillClimbing_minimize(R);
-            
-            if(this.funcaoObjetivo.calculate(W) < this.funcaoObjetivo.calculate(S)){
+
+            if (this.funcaoObjetivo.calculate(W) < this.funcaoObjetivo.calculate(S)) {
+                System.out.println("Ponto atual : (" + S.get(0) + ", " + S.get(1) + ")");
+                System.out.println("Valor da função objetivo: " + funcaoObjetivo.calculate(S));
+                System.out.print("\n");
                 this.S = new ArrayList<>();
                 this.S = W;
                 W = new ArrayList<>();
+
+            }
+
+            //parar quando atingir uma solução satisfatória
+            if ((funcaoObjetivo.calculate(S) - epsilon) <= 0) {
+                break;
             }
         }
-        
-        System.out.println(funcaoObjetivo.calculate(S));
-        return 0.0;
+
+        System.out.println("Ponto final : (" + S.get(0) + ", " + S.get(1) + ")");
+        System.out.println("Valor da função objetivo: " + funcaoObjetivo.calculate(S));
+        System.out.print("\n");
+        System.out.println("Quantidade de iterações: " + (i + 1) + "\n");
+
+        System.out.println("FIM\n");
+
+        System.out.println("----------------------------------------\n");
+
+        arquivo.write(S.get(0), S.get(1), funcaoObjetivo.calculate(S), (i + 1));
+
+        return -1;
     }
 
     private double iteratedLocalSearch_maximize(ArrayList<Double> solucaoLocal) {
@@ -130,15 +164,15 @@ public class IteratedLocalSearch {
         //Busca local a partir da solução inicial
         if (this.n == 1) {
             Sl = hc.hillClimbing_maximize(S);
-            System.out.println(funcaoObjetivo.calculate(Sl));
+//            System.out.println(funcaoObjetivo.calculate(Sl));
             return iteratedLocalSearch_maximize(Sl);
         } else if (this.n == 2) {
             Sl = hc.hillClimbing_minimize(S);
-            System.out.println(funcaoObjetivo.calculate(Sl));
+//            System.out.println(funcaoObjetivo.calculate(Sl));
             return iteratedLocalSearch_minimize(Sl);
         } else {
             try {
-                throw new Exception("Quantidade inválidade de variáveis.");
+                throw new Exception("Quantidade inválida de variáveis.");
             } catch (Exception ex) {
 
             }
